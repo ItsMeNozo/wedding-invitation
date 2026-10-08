@@ -306,7 +306,7 @@
    */
   function initAutoScroll() {
     if (reduceMotion) return;
-    var SPEED = 40;        // px/giây: đủ chậm để đọc kịp chữ
+    var SPEED = 48;        // px/giây: đủ chậm để đọc kịp chữ
     var START_DELAY = 1500; // chờ hiệu ứng mở phong bì xong
     var IDLE_MS = 8000;     // 8 giây không thao tác thì cuộn lại
     var running = false, raf = null, idleTimer = null, last = 0, pos = 0;
