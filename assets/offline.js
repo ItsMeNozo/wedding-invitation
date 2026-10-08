@@ -150,9 +150,9 @@
     if (n < 2) return;
     var root = stage.parentElement;                 // khung h-[340px] (vuốt)
     var gallery = root.parentElement;               // bao cả chấm (hover)
-    var prevBtn = root.querySelector('[aria-label="Previous photo"]');
-    var nextBtn = root.querySelector('[aria-label="Next photo"]');
-    var dots = Array.prototype.slice.call(gallery.querySelectorAll('[aria-label^="Go to photo"]'));
+    var prevBtn = root.querySelector('[aria-label="Ảnh trước"]');
+    var nextBtn = root.querySelector('[aria-label="Ảnh sau"]');
+    var dots = Array.prototype.slice.call(gallery.querySelectorAll('[aria-label^="Đến ảnh"]'));
     var cur = 0, visible = false, hovered = false, held = false, holdTimer = null, timer = null;
 
     function rel(i) { var d = i - cur; return d > n / 2 ? d - n : d < -n / 2 ? d + n : d; }
@@ -225,9 +225,9 @@
         var btnCss = 'position:absolute;background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:9999px;width:44px;height:44px;font-size:24px;line-height:44px;cursor:pointer;';
         lb.innerHTML =
           '<img style="max-width:92vw;max-height:88vh;object-fit:contain;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)">' +
-          '<button aria-label="Close" style="' + btnCss + 'top:16px;right:16px;">&times;</button>' +
-          '<button aria-label="Previous" style="' + btnCss + 'left:16px;top:50%;transform:translateY(-50%);">&#8249;</button>' +
-          '<button aria-label="Next" style="' + btnCss + 'right:16px;top:50%;transform:translateY(-50%);">&#8250;</button>';
+          '<button aria-label="Đóng" style="' + btnCss + 'top:16px;right:16px;">&times;</button>' +
+          '<button aria-label="Ảnh trước" style="' + btnCss + 'left:16px;top:50%;transform:translateY(-50%);">&#8249;</button>' +
+          '<button aria-label="Ảnh sau" style="' + btnCss + 'right:16px;top:50%;transform:translateY(-50%);">&#8250;</button>';
         lbImg = lb.querySelector('img');
         var bs = lb.querySelectorAll('button');
         bs[0].onclick = closeLb;
@@ -272,9 +272,9 @@
     var closeBtn = dlg.querySelector('.modal-box .btn-circle');
     if (closeBtn) closeBtn.addEventListener('click', function () { dlg.close(); });
 
-    // Nút "Save QR": tải ảnh QR tương ứng về máy
+    // Nút "Lưu mã QR": tải ảnh QR tương ứng về máy
     Array.prototype.forEach.call(dlg.querySelectorAll('button'), function (b) {
-      if (b.textContent.trim() !== 'Save QR') return;
+      if (b.textContent.trim() !== 'Lưu mã QR') return;
       b.addEventListener('click', function () {
         var card = b.parentElement;
         var img = card.querySelector('img');
