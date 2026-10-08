@@ -159,6 +159,21 @@
       load(0);
     }
 
+    if (magic) {
+      // Emoji 🪄 nhỏ, khó hiểu với người lớn tuổi: thay bằng nút có icon đũa phép + chữ "Gợi ý"
+      magic.classList.remove('p-2', 'text-base', 'hover:scale-110');
+      magic.style.cssText += 'height:40px;padding:0 14px;display:flex;align-items:center;gap:6px;' +
+        'border:1px solid rgba(233,206,158,.5);border-radius:9999px;font-size:14px;white-space:nowrap;';
+      magic.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="m14.5 9.5-11 11"/><path d="m13 6 5 5"/>' +
+        '<path d="M18 2.5v3M16.5 4h3"/><path d="M21 9.5v2M20 10.5h2"/><path d="M10 2.5v2M9 3.5h2"/></svg>' +
+        '<span>Gợi ý</span>';
+      magic.title = 'Bấm để điền sẵn một lời chúc';
+      // Màn hình hẹp: giữ nút Gửi trên một dòng và chừa khoảng cách giữa hai nút
+      magic.parentElement.parentElement.style.gap = '12px';
+      submit.style.whiteSpace = 'nowrap';
+    }
     if (magic) magic.addEventListener('click', function () {
       var cur = msgInput.value, next;
       do { next = SAMPLE_WISHES[Math.floor(Math.random() * SAMPLE_WISHES.length)]; } while (next === cur && SAMPLE_WISHES.length > 1);
@@ -189,8 +204,9 @@
     dlg.innerHTML =
       '<div class="modal-box max-w-lg p-0 max-h-[90vh] overflow-y-auto" style="background-color: rgb(22, 38, 20);">' +
         '<div class="relative px-6 pt-6 pb-4 text-center" style="background-color: ' + GOLD + ';">' +
-          '<button type="button" data-close class="btn btn-sm btn-circle btn-ghost absolute right-3 top-3 text-white/80 hover:text-white hover:bg-white/20" aria-label="Đóng">✕</button>' +
-          '<h2 class="uppercase font-normal text-[20px] md:text-[26px]" style="text-shadow: rgba(0,0,0,0.2) 1px 1px 2px; font-family: Baskerville, \'Times New Roman\', serif; letter-spacing: 0.05em; color: white;">Xác nhận tham dự</h2>' +
+          '<button type="button" data-close class="modal-close absolute right-3 top-3" aria-label="Đóng">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 18 18 6M6 6l12 12"/></svg></button>' +
+          '<h2 class="uppercase font-normal text-[20px] md:text-[26px]" style="font-family: Baskerville, \'Times New Roman\', serif; letter-spacing: 0.05em; color: rgb(85, 63, 24);">Xác nhận tham dự</h2>' +
         '</div>' +
         '<form class="p-6 space-y-4 text-sm" style="color: ' + GOLD + ';">' +
           '<input name="name" placeholder="Tên của bạn*" required maxlength="100" class="' + FIELD_CLS + '" style="' + FIELD_CSS + '">' +

@@ -278,7 +278,7 @@
       if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
     });
     // Nút X ở góc tiêu đề
-    var closeBtn = dlg.querySelector('.modal-box .btn-circle');
+    var closeBtn = dlg.querySelector('.modal-box .modal-close');
     if (closeBtn) closeBtn.addEventListener('click', function () { dlg.close(); });
 
     // Nút "Lưu mã QR": tải ảnh QR tương ứng về máy
@@ -404,12 +404,12 @@
     wrap.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:50;display:none;align-items:center;gap:8px;' +
       'flex-direction:row-reverse;font-family:Baskerville,"Times New Roman",serif;';
     wrap.innerHTML =
-      '<button type="button" aria-label="Âm lượng nhạc" aria-expanded="false" style="width:44px;height:44px;border-radius:9999px;border:1px solid ' + GOLD + ';' +
-        'background:rgba(22,38,20,.85);color:' + GOLD + ';display:flex;align-items:center;justify-content:center;cursor:pointer;' +
+      '<button type="button" aria-label="Âm lượng nhạc" aria-expanded="false" style="height:44px;padding:0 14px;gap:6px;border-radius:9999px;border:1px solid ' + GOLD + ';' +
+        'background:rgba(22,38,20,.85);color:' + GOLD + ';display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;white-space:nowrap;' +
         'box-shadow:0 4px 14px rgba(0,0,0,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);"></button>' +
       '<div data-panel style="display:none;align-items:center;gap:10px;padding:8px 14px;border-radius:9999px;border:1px solid rgba(233,206,158,.4);' +
         'background:rgba(22,38,20,.9);color:' + GOLD + ';box-shadow:0 4px 14px rgba(0,0,0,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">' +
-        '<button type="button" data-toggle style="border:0;background:none;color:' + GOLD + ';font-size:12px;cursor:pointer;white-space:nowrap;padding:0;"></button>' +
+        '<button type="button" data-toggle style="border:0;background:none;color:' + GOLD + ';font-size:14px;cursor:pointer;white-space:nowrap;padding:0;"></button>' +
         '<input type="range" min="0" max="100" step="1" aria-label="Âm lượng" style="width:110px;accent-color:' + GOLD + ';cursor:pointer;">' +
       '</div>';
     document.body.appendChild(wrap);
@@ -419,7 +419,8 @@
 
     function render() {
       var silent = audio.paused || volume === 0;
-      btn.innerHTML = silent ? ICON_OFF : ICON_ON;
+      // Kèm chữ "Nhạc" để người lớn tuổi biết nút này để làm gì
+      btn.innerHTML = (silent ? ICON_OFF : ICON_ON) + '<span>Nhạc</span>';
       toggle.textContent = audio.paused ? 'Bật nhạc' : 'Tắt nhạc';
     }
     function setOpen(open) {
