@@ -196,8 +196,17 @@
         if (rel(i) === 0) openLightbox(i); else { go(i); hold(); }
       });
     });
-    gallery.addEventListener('mouseenter', function () { clearTimeout(holdTimer); hovered = true; schedule(); });
-    gallery.addEventListener('mouseleave', function () { hovered = false; schedule(); });
+    // Chỉ dừng khi khách thật sự rê chuột trên slideshow. Bỏ qua:
+    //  - chạm trên điện thoại (sinh mouseenter nhưng không bao giờ có mouseleave -> dừng mãi)
+    //  - trang tự cuộn khiến slideshow lướt qua dưới con trỏ đứng yên (movement = 0)
+    gallery.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse' || (!e.movementX && !e.movementY) || hovered) return;
+      hovered = true; schedule();
+    });
+    gallery.addEventListener('pointerleave', function () {
+      if (!hovered) return;
+      hovered = false; schedule();
+    });
 
     var touch = null;
     root.addEventListener('touchstart', function (e) { touch = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
@@ -290,11 +299,172 @@
     });
   }
 
+  /* ---------------- 5. Tự động cuộn ----------------
+   * Bắt đầu sau khi mở phong bì. Khách cuộn/chạm/click/gõ phím thì dừng ngay;
+   * để yên IDLE_MS thì tự cuộn tiếp. Không cuộn khi đang mở hộp thoại, xem ảnh lớn
+   * hoặc đang nhập lời chúc.
+   */
+  function initAutoScroll() {
+    if (reduceMotion) return;
+    var SPEED = 40;        // px/giây: đủ chậm để đọc kịp chữ
+    var START_DELAY = 1500; // chờ hiệu ứng mở phong bì xong
+    var IDLE_MS = 8000;     // 8 giây không thao tác thì cuộn lại
+    var running = false, raf = null, idleTimer = null, last = 0, pos = 0;
+
+    function blocked() {
+      var a = document.activeElement;
+      return document.body.style.overflow === 'hidden' ||
+        document.querySelector('dialog[open]') ||
+        (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT'));
+    }
+    function atBottom() {
+      return window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+    }
+
+    function step(t) {
+      if (!running) return;
+      if (blocked()) { stop(); schedule(); return; }
+      if (atBottom()) { stop(); return; }
+      // Cộng dồn phần lẻ: mỗi khung hình chỉ dịch < 1px
+      pos += SPEED * Math.min(t - last, 100) / 1000;
+      last = t;
+      if (Math.abs(pos - window.scrollY) > 2) pos = window.scrollY; // trang tự nhảy (vd. đổi kích thước)
+      window.scrollTo({ top: pos, behavior: 'instant' });
+      raf = requestAnimationFrame(step);
+    }
+
+    function start() {
+      if (running || atBottom()) return;
+      if (blocked()) { schedule(); return; }
+      running = true;
+      pos = window.scrollY;
+      raf = requestAnimationFrame(function (t) { last = t; raf = requestAnimationFrame(step); });
+    }
+    function stop() {
+      running = false;
+      if (raf) cancelAnimationFrame(raf);
+      raf = null;
+    }
+    function schedule() {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(start, IDLE_MS);
+    }
+    function onUser() { stop(); schedule(); }
+
+    // Chỉ nghe thao tác thật của khách, không nghe 'scroll' (vì chính autoscroll cũng phát ra)
+    ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(function (ev) {
+      window.addEventListener(ev, onUser, { passive: true });
+    });
+
+    // Trang chủ động đưa khách tới một mục (vd. Hộp mừng cưới): dừng hẳn,
+    // chỉ hẹn giờ chạy lại khi khách thao tác tiếp
+    document.addEventListener('autoscroll:hold', function () {
+      stop();
+      clearTimeout(idleTimer);
+    });
+
+    document.addEventListener('invite:opened', function () {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(start, START_DELAY);
+    });
+  }
+
+  /* ---------------- 6. Điều khiển nhạc (âm lượng, tắt/bật) ---------------- */
+  function initMusicControl() {
+    var audio = document.querySelector('.demo-page audio');
+    if (!audio) return;
+    var GOLD = '#e9ce9e', DARK = '#162614';
+    var KEY = 'wedding-volume';
+    var volume = 0.6;
+    try { var saved = parseFloat(localStorage.getItem(KEY)); if (saved >= 0 && saved <= 1) volume = saved; } catch (_) {}
+    var gain = null;
+
+    // iOS bỏ qua audio.volume (luôn = 1); khi đó chỉnh âm lượng qua Web Audio GainNode
+    function applyVolume() {
+      if (gain) { gain.gain.value = volume; return; }
+      audio.volume = volume;
+      if (Math.abs(audio.volume - volume) > 0.01 && (window.AudioContext || window.webkitAudioContext)) {
+        try {
+          var ctx = new (window.AudioContext || window.webkitAudioContext)();
+          gain = ctx.createGain();
+          ctx.createMediaElementSource(audio).connect(gain);
+          gain.connect(ctx.destination);
+          gain.gain.value = volume;
+          var resume = function () { if (ctx.state === 'suspended') ctx.resume(); };
+          resume();
+          audio.addEventListener('play', resume);
+        } catch (_) { gain = null; }
+      }
+    }
+
+    var ICON_ON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>';
+    var ICON_OFF = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>';
+
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:50;display:none;align-items:center;gap:8px;' +
+      'flex-direction:row-reverse;font-family:Baskerville,"Times New Roman",serif;';
+    wrap.innerHTML =
+      '<button type="button" aria-label="Âm lượng nhạc" aria-expanded="false" style="width:44px;height:44px;border-radius:9999px;border:1px solid ' + GOLD + ';' +
+        'background:rgba(22,38,20,.85);color:' + GOLD + ';display:flex;align-items:center;justify-content:center;cursor:pointer;' +
+        'box-shadow:0 4px 14px rgba(0,0,0,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);"></button>' +
+      '<div data-panel style="display:none;align-items:center;gap:10px;padding:8px 14px;border-radius:9999px;border:1px solid rgba(233,206,158,.4);' +
+        'background:rgba(22,38,20,.9);color:' + GOLD + ';box-shadow:0 4px 14px rgba(0,0,0,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">' +
+        '<button type="button" data-toggle style="border:0;background:none;color:' + GOLD + ';font-size:12px;cursor:pointer;white-space:nowrap;padding:0;"></button>' +
+        '<input type="range" min="0" max="100" step="1" aria-label="Âm lượng" style="width:110px;accent-color:' + GOLD + ';cursor:pointer;">' +
+      '</div>';
+    document.body.appendChild(wrap);
+    var btn = wrap.firstChild, panel = wrap.querySelector('[data-panel]');
+    var toggle = wrap.querySelector('[data-toggle]'), slider = wrap.querySelector('input');
+    slider.value = Math.round(volume * 100);
+
+    function render() {
+      var silent = audio.paused || volume === 0;
+      btn.innerHTML = silent ? ICON_OFF : ICON_ON;
+      toggle.textContent = audio.paused ? 'Bật nhạc' : 'Tắt nhạc';
+    }
+    function setOpen(open) {
+      panel.style.display = open ? 'flex' : 'none';
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      setOpen(panel.style.display === 'none');
+    });
+    toggle.addEventListener('click', function () {
+      applyVolume();
+      if (audio.paused) { var p = audio.play(); if (p && p.catch) p.catch(function () {}); }
+      else audio.pause();
+    });
+    slider.addEventListener('input', function () {
+      volume = slider.value / 100;
+      applyVolume();
+      // Kéo âm lượng lên khi nhạc đang tắt thì bật nhạc luôn
+      if (volume > 0 && audio.paused) { var p = audio.play(); if (p && p.catch) p.catch(function () {}); }
+      try { localStorage.setItem(KEY, String(volume)); } catch (_) {}
+      render();
+    });
+    panel.addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () { setOpen(false); });
+    audio.addEventListener('play', render);
+    audio.addEventListener('pause', render);
+
+    // Đặt âm lượng đã lưu ngay khi khách bấm mở thiệp: cần đúng lúc có thao tác
+    // của khách thì iOS mới cho tạo AudioContext
+    var envBtn = document.querySelector('[data-landing-screenshot-id="invite-envelope"] a');
+    if (envBtn) envBtn.addEventListener('click', applyVolume);
+    audio.volume = volume;
+    render();
+    document.addEventListener('invite:opened', function () { wrap.style.display = 'flex'; });
+  }
+
   function init() {
     initEnvelope();
     initParallax();
     initCarousel();
     initGiftBox();
+    initAutoScroll();
+    initMusicControl();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

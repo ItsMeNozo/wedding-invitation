@@ -9,6 +9,11 @@
   var GOLD = 'rgb(233, 206, 158)';
   var FIELD_CSS = 'border-color:' + GOLD + ';color:' + GOLD + ';background-color:rgba(233, 206, 158, 0.1);';
   var FIELD_CLS = 'w-full rounded-lg border px-4 py-3 text-sm focus:outline-none';
+  // Mũi tên mặc định của <select> nhỏ, sát mép và mỗi trình duyệt một kiểu: thay bằng mũi tên vẽ sẵn
+  var CHEVRON = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 ' +
+    'stroke=%27%23e9ce9e%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E';
+  var SELECT_CSS = FIELD_CSS + 'appearance:none;-webkit-appearance:none;padding-right:40px;cursor:pointer;' +
+    'background-image:url(\'' + CHEVRON + '\');background-repeat:no-repeat;background-position:right 14px center;background-size:16px 16px;';
   var SAMPLE_WISHES = [
     'Chúc hai bạn trăm năm hạnh phúc, viên mãn yêu thương.',
     'Chúc vợ chồng son mãi yêu thương, sớm có tin vui nhé!',
@@ -196,10 +201,10 @@
             '<label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="attending" value="no"> Tiếc quá, không đến được</label>' +
           '</div>' +
           '<div class="flex gap-3" data-guests>' +
-            '<label class="flex-1">Số người<select name="guests" class="mt-1 ' + FIELD_CLS + '" style="' + FIELD_CSS + '">' +
+            '<label class="flex-1">Số người<select name="guests" class="mt-1 ' + FIELD_CLS + '" style="' + SELECT_CSS + '">' +
               [1, 2, 3, 4, 5].map(function (n) { return '<option value="' + n + '">' + n + '</option>'; }).join('') +
             '</select></label>' +
-            '<label class="flex-1">Khách của<select name="side" class="mt-1 ' + FIELD_CLS + '" style="' + FIELD_CSS + '">' +
+            '<label class="flex-1">Khách của<select name="side" class="mt-1 ' + FIELD_CLS + '" style="' + SELECT_CSS + '">' +
               '<option>Nhà trai</option><option>Nhà gái</option>' +
             '</select></label>' +
           '</div>' +
@@ -213,6 +218,39 @@
     Array.prototype.forEach.call(dlg.querySelectorAll('option'), function (o) { o.style.cssText = 'background:#162614;color:' + GOLD; });
     document.body.appendChild(dlg);
     return dlg;
+  }
+
+  function goToGiftBox() {
+    var gift = document.querySelector('button[aria-label="Mở hộp mừng cưới"]');
+    if (!gift) return;
+    // Giữ yên trang tại đây, autoscroll chỉ chạy lại sau khi khách thao tác tiếp
+    document.dispatchEvent(new Event('autoscroll:hold'));
+    gift.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Ảnh lazy phía trên tải xong trong lúc cuộn làm trang dài ra: kiểm tra lại và chỉnh cho đúng
+    // (dừng chỉnh nếu khách đã tự cuộn/chạm)
+    var checks = 0, userMoved = false;
+    function moved() { userMoved = true; }
+    ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(function (ev) {
+      window.addEventListener(ev, moved, { passive: true, once: true });
+    });
+    (function recheck() {
+      setTimeout(function () {
+        if (userMoved) return;
+        var r = gift.getBoundingClientRect();
+        if (Math.abs(r.top + r.height / 2 - window.innerHeight / 2) > 40) {
+          gift.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        if (++checks < 4) recheck();
+      }, 700);
+    })();
+    // Nhịp sáng nhẹ để khách nhận ra hộp mừng cưới
+    if (gift.animate) setTimeout(function () {
+      gift.animate([
+        { transform: 'scale(1)', filter: 'drop-shadow(0 0 0 rgba(233,206,158,0))' },
+        { transform: 'scale(1.06)', filter: 'drop-shadow(0 0 18px rgba(233,206,158,0.7))' },
+        { transform: 'scale(1)', filter: 'drop-shadow(0 0 0 rgba(233,206,158,0))' }
+      ], { duration: 1400, iterations: 2, easing: 'ease-in-out' });
+    }, 700);
   }
 
   function initRsvp() {
@@ -254,6 +292,7 @@
         status.textContent = form.attending.value === 'yes'
           ? 'Cảm ơn bạn! Hẹn gặp bạn tại tiệc cưới 💛'
           : 'Cảm ơn bạn đã báo, tụi mình rất tiếc vì không gặp được bạn 💛';
+        var notComing = form.attending.value === 'no';
         submit.disabled = true;
         setTimeout(function () {
           dlg.close();
@@ -261,7 +300,10 @@
           guestsRow.style.display = '';
           status.textContent = '';
           submit.disabled = false;
-        }, 2500);
+          // Không đến được: đưa khách tới thẳng Hộp mừng cưới thay vì chờ cuộn tới
+          // Chờ trình duyệt trả focus về nút RSVP xong, nếu không lệnh cuộn sẽ bị hủy
+          if (notComing) setTimeout(goToGiftBox, 150);
+        }, notComing ? 2000 : 2500);
       });
       return dlg;
     }
